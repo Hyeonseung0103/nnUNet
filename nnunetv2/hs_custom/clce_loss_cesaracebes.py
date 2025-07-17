@@ -59,7 +59,6 @@ class dice_clCE_loss(nn.Module):
 
         skel_pred = self.m_skeletonize(y_pred)
         skel_true = self.m_skeletonize(y_true_oh)
-        print('-----------------' , skel_true.shape)
 
         tprec = torch.mul(cross_ent, skel_true[:,1]).mean()
         tsens = torch.mul(cross_ent, skel_pred[:,1]).mean()
