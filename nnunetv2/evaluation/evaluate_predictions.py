@@ -1,10 +1,13 @@
 import multiprocessing
 import os
 from copy import deepcopy
-from typing import Tuple, List, Union
+from multiprocessing import Pool
+from typing import Tuple, List, Union, Optional
 
 import numpy as np
-from batchgenerators.utilities.file_and_folder_operations import subfiles, join, save_json, load_json, \
+# from batchgenerators.utilities.file_and_folder_operations import subfiles, join, save_json, load_json, \
+#     isfile # 여기서 똑같은 함수 subfiles 사용하면 안 됨... 아예 해당 함수를 이 스크립트로 불러와서 하니까 됨..
+from batchgenerators.utilities.file_and_folder_operations import join, save_json, load_json, \
     isfile
 from nnunetv2.configuration import default_num_processes
 from nnunetv2.imageio.base_reader_writer import BaseReaderWriter
@@ -124,7 +127,8 @@ def compute_metrics_on_folder(folder_ref: str, folder_pred: str, output_file: st
                               regions_or_labels: Union[List[int], List[Union[int, Tuple[int, ...]]]],
                               ignore_label: int = None,
                               num_processes: int = default_num_processes,
-                              chill: bool = True) -> dict:
+                              chill: bool = True,
+                              inference: bool = False) -> dict:
     """
     output_file must end with .json; can be None
     """
@@ -133,9 +137,9 @@ def compute_metrics_on_folder(folder_ref: str, folder_pred: str, output_file: st
     files_pred = subfiles(folder_pred, suffix=file_ending, join=False)
     files_ref = subfiles(folder_ref, suffix=file_ending, join=False)
     if not chill:
-        present = [isfile(join(folder_pred, i)) for i in files_ref]
+        present = [isfile(join(folder_pred, i.split('.')[0] + '-pred.seg.nrrd')) for i in files_ref] if inference else [isfile(join(folder_pred, i)) for i in files_ref]
         assert all(present), "Not all files in folder_ref exist in folder_pred"
-    files_ref = [join(folder_ref, i) for i in files_pred]
+    files_ref = [join(folder_ref, i.split('.')[0] + '.nrrd') for i in files_pred] if inference else [join(folder_ref, i) for i in files_pred] # pred 에 있는 파일만 ref 에 넣어야함
     files_pred = [join(folder_pred, i) for i in files_pred]
     with multiprocessing.get_context("spawn").Pool(num_processes) as pool:
         # for i in list(zip(files_ref, files_pred, [image_reader_writer] * len(files_pred), [regions_or_labels] * len(files_pred), [ignore_label] * len(files_pred))):
@@ -173,6 +177,18 @@ def compute_metrics_on_folder(folder_ref: str, folder_pred: str, output_file: st
     return result
     # print('DONE')
 
+def subfiles(folder: str, join: bool = True, prefix: str = None, suffix: str = None, sort: bool = True) -> List[str]:
+    if join:
+        l = os.path.join
+    else:
+        l = lambda x, y: y
+    # res = [l(folder, i) for i in os.listdir(folder) if os.path.isfile(os.path.join(folder, i))
+    #        and (prefix is None or i.startswith(prefix))
+    #        and (suffix is None or i.endswith(suffix))]
+    res = [l(folder, i) for i in os.listdir(folder)]
+    if sort:
+        res.sort()
+    return res
 
 def compute_metrics_on_folder2(folder_ref: str, folder_pred: str, dataset_json_file: str, plans_file: str,
                                output_file: str = None,
@@ -189,11 +205,14 @@ def compute_metrics_on_folder2(folder_ref: str, folder_pred: str, dataset_json_f
     # maybe auto set output file
     if output_file is None:
         output_file = join(folder_pred, 'summary.json')
+    
+    if os.path.exists(output_file):
+        os.remove(output_file)
 
     lm = PlansManager(plans_file).get_label_manager(dataset_json)
     compute_metrics_on_folder(folder_ref, folder_pred, output_file, rw, file_ending,
                               lm.foreground_regions if lm.has_regions else lm.foreground_labels, lm.ignore_label,
-                              num_processes, chill=chill)
+                              num_processes, chill=chill, inference=True)
 
 
 def compute_metrics_on_folder_simple(folder_ref: str, folder_pred: str, labels: Union[Tuple[int, ...], List[int]],
@@ -209,7 +228,7 @@ def compute_metrics_on_folder_simple(folder_ref: str, folder_pred: str, labels: 
     if output_file is None:
         output_file = join(folder_pred, 'summary.json')
     compute_metrics_on_folder(folder_ref, folder_pred, output_file, rw, file_ending,
-                              labels, ignore_label=ignore_label, num_processes=num_processes, chill=chill)
+                              labels, ignore_label=ignore_label, num_processes=num_processes, chill=chill, inference=True)
 
 
 def evaluate_folder_entry_point():

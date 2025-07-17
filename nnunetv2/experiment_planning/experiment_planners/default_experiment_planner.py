@@ -85,6 +85,70 @@ class ExperimentPlanner(object):
         if isfile(join(self.raw_dataset_folder, 'splits_final.json')):
             _maybe_copy_splits_file(join(self.raw_dataset_folder, 'splits_final.json'),
                                     join(preprocessed_folder, 'splits_final.json'))
+    
+    def __init__(self, dataset_name: str,
+                 gpu_memory_target_in_gb: float = 8,
+                 preprocessor_name: str = 'DefaultPreprocessor', plans_name: str = 'nnUNetPlans',
+                 overwrite_target_spacing: Union[List[float], Tuple[float, ...]] = None,
+                 suppress_transpose: bool = False):
+        """
+        overwrite_target_spacing only affects 3d_fullres! (but by extension 3d_lowres which starts with fullres may
+        also be affected
+        """
+
+        self.dataset_name = dataset_name
+        self.suppress_transpose = suppress_transpose
+        self.raw_dataset_folder = join(nnUNet_raw, self.dataset_name)
+        preprocessed_folder = join(nnUNet_preprocessed, self.dataset_name)
+        self.dataset_json = load_json(join(self.raw_dataset_folder, 'dataset.json'))
+        self.dataset = get_filenames_of_train_images_and_targets(self.raw_dataset_folder, self.dataset_json)
+
+        # load dataset fingerprint
+        if not isfile(join(preprocessed_folder, 'dataset_fingerprint.json')):
+            raise RuntimeError('Fingerprint missing for this dataset. Please run nnUNet_extract_dataset_fingerprint')
+
+        self.dataset_fingerprint = load_json(join(preprocessed_folder, 'dataset_fingerprint.json'))
+
+        self.anisotropy_threshold = ANISO_THRESHOLD
+
+        self.UNet_base_num_features = 32
+        self.UNet_class = PlainConvUNet
+        # the following two numbers are really arbitrary and were set to reproduce nnU-Net v1's configurations as
+        # much as possible
+        self.UNet_reference_val_3d = 560000000  # 455600128  550000000
+        self.UNet_reference_val_2d = 85000000  # 83252480
+        self.UNet_reference_com_nfeatures = 32
+        self.UNet_reference_val_corresp_GB = 8
+        self.UNet_reference_val_corresp_bs_2d = 12
+        self.UNet_reference_val_corresp_bs_3d = 2
+        self.UNet_featuremap_min_edge_length = 4
+        self.UNet_blocks_per_stage_encoder = (2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2)
+        self.UNet_blocks_per_stage_decoder = (2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2)
+        self.UNet_min_batch_size = 2
+        self.UNet_max_features_2d = 512
+        self.UNet_max_features_3d = 320
+        self.max_dataset_covered = 0.05 # we limit the batch size so that no more than 5% of the dataset can be seen
+        # in a single forward/backward pass
+
+        self.UNet_vram_target_GB = gpu_memory_target_in_gb
+
+        self.lowres_creation_threshold = 0.25  # if the patch size of fullres is less than 25% of the voxels in the
+        # median shape then we need a lowres config as well
+
+        self.preprocessor_name = preprocessor_name
+        self.plans_identifier = plans_name
+        self.overwrite_target_spacing = overwrite_target_spacing
+        assert overwrite_target_spacing is None or len(overwrite_target_spacing), 'if overwrite_target_spacing is ' \
+                                                                                  'used then three floats must be ' \
+                                                                                  'given (as list or tuple)'
+        assert overwrite_target_spacing is None or all([isinstance(i, float) for i in overwrite_target_spacing]), \
+            'if overwrite_target_spacing is used then three floats must be given (as list or tuple)'
+
+        self.plans = None
+
+        if isfile(join(self.raw_dataset_folder, 'splits_final.json')):
+            _maybe_copy_splits_file(join(self.raw_dataset_folder, 'splits_final.json'),
+                                    join(preprocessed_folder, 'splits_final.json'))
 
     def determine_reader_writer(self):
         example_image = self.dataset[self.dataset.keys().__iter__().__next__()]['images'][0]

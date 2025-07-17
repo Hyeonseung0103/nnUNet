@@ -1,5 +1,6 @@
 import torch
 from nnunetv2.training.loss.dice import SoftDiceLoss, MemoryEfficientSoftDiceLoss
+from nnunetv2.training.loss.focal import FocalLoss
 from nnunetv2.training.loss.robust_ce_loss import RobustCrossEntropyLoss, TopKLoss
 from nnunetv2.utilities.helpers import softmax_helper_dim1
 from torch import nn
@@ -153,4 +154,37 @@ class DC_and_topk_loss(nn.Module):
             if self.weight_ce != 0 and (self.ignore_label is None or num_fg > 0) else 0
 
         result = self.weight_ce * ce_loss + self.weight_dice * dc_loss
+        return result
+
+class DC_and_FC_loss(nn.Module):
+    def __init__(self, soft_dice_kwargs, focal_kwargs, weight_focal=1.0, weight_dice=1.0, ignore_label=None):
+        super().__init__()
+
+        if ignore_label is not None:
+            focal_kwargs['ignore_index'] = ignore_label
+
+        self.weight_dice = weight_dice
+        self.weight_focal = weight_focal
+        self.ignore_label = ignore_label
+
+        self.dc = SoftDiceLoss(apply_nonlin=softmax_helper_dim1,
+                               **soft_dice_kwargs)
+
+        # 추가된 FocalLoss 사용 (ignore_label 설정 가능)
+        self.focal = FocalLoss(**focal_kwargs)
+
+    def forward(self, net_output: torch.Tensor, target: torch.Tensor):
+        """
+        net_output: [B, C=3, H, W]
+        target: [B, 1, H, W] (label indices: 0=background, 1~2=classes)
+        """
+        # Dice loss는 one-hot 형태로 필요하므로 그대로 전달하되,
+        # background 픽셀은 계산에서 제외됨 (do_bg=False로 설정했기 때문)
+        dice_loss = self.dc(net_output, target)
+
+        # Focal loss 계산 시 background 픽셀을 무시하기 위해 ignore_index 설정
+        focal_loss = self.focal(net_output, target)
+
+        result = self.weight_focal * focal_loss + self.weight_dice * dice_loss
+
         return result

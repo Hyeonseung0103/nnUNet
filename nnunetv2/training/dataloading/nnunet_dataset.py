@@ -133,17 +133,14 @@ class nnUNetDatasetBlosc2(nnUNetBaseDataset):
             'nthreads': 1
         }
         data_b2nd_file = join(self.source_folder, identifier + '.b2nd')
-
-        # mmap does not work with Windows -> https://github.com/MIC-DKFZ/nnUNet/issues/2723
-        mmap_kwargs = {} if os.name == "nt" else {'mmap_mode': 'r'}
-        data = blosc2.open(urlpath=data_b2nd_file, mode='r', dparams=dparams, **mmap_kwargs)
+        data = blosc2.open(urlpath=data_b2nd_file, mode='r', dparams=dparams, mmap_mode='r')
 
         seg_b2nd_file = join(self.source_folder, identifier + '_seg.b2nd')
-        seg = blosc2.open(urlpath=seg_b2nd_file, mode='r', dparams=dparams, **mmap_kwargs)
+        seg = blosc2.open(urlpath=seg_b2nd_file, mode='r', dparams=dparams, mmap_mode='r')
 
         if self.folder_with_segs_from_previous_stage is not None:
             prev_seg_b2nd_file = join(self.folder_with_segs_from_previous_stage, identifier + '.b2nd')
-            seg_prev = blosc2.open(urlpath=prev_seg_b2nd_file, mode='r', dparams=dparams, **mmap_kwargs)
+            seg_prev = blosc2.open(urlpath=prev_seg_b2nd_file, mode='r', dparams=dparams, mmap_mode='r')
         else:
             seg_prev = None
 
@@ -177,9 +174,9 @@ class nnUNetDatasetBlosc2(nnUNetBaseDataset):
         }
         # print(output_filename_truncated, data.shape, seg.shape, blocks, chunks, blocks_seg, chunks_seg, data.dtype, seg.dtype)
         blosc2.asarray(np.ascontiguousarray(data), urlpath=output_filename_truncated + '.b2nd', chunks=chunks,
-                       blocks=blocks, cparams=cparams)
+                       blocks=blocks, cparams=cparams, mmap_mode='w+')
         blosc2.asarray(np.ascontiguousarray(seg), urlpath=output_filename_truncated + '_seg.b2nd', chunks=chunks_seg,
-                       blocks=blocks_seg, cparams=cparams)
+                       blocks=blocks_seg, cparams=cparams, mmap_mode='w+')
         write_pickle(properties, output_filename_truncated + '.pkl')
 
     @staticmethod
@@ -313,3 +310,15 @@ def infer_dataset_class(folder: str) -> Union[Type[nnUNetDatasetBlosc2], Type[nn
     assert len(file_endings) == 1, (f'Found more than one file ending in the folder {folder}. '
                                     f'Unable to infer nnUNetDataset variant!')
     return file_ending_dataset_mapping[list(file_endings)[0]]
+
+def subfiles(folder: str, join: bool = True, prefix: str = None, suffix: str = None, sort: bool = True) -> List[str]:
+    if join:
+        l = os.path.join
+    else:
+        l = lambda x, y: y
+    res = [l(folder, i) for i in os.listdir(folder) if os.path.isfile(os.path.join(folder, i))
+           and (prefix is None or i.startswith(prefix))
+           and (suffix is None or i.endswith(suffix))]
+    if sort:
+        res.sort()
+    return res

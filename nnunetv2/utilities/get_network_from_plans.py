@@ -30,6 +30,9 @@ def get_network_from_plans(arch_class_name, arch_kwargs, arch_kwargs_req_import,
 
     if deep_supervision is not None:
         architecture_kwargs['deep_supervision'] = deep_supervision
+    
+    if 'Plain' not in network_class:
+        architecture_kwargs['n_blocks_per_stage'] = architecture_kwargs.pop('n_conv_per_stage')
 
     network = nw_class(
         input_channels=input_channels,

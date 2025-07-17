@@ -1,7 +1,7 @@
 import argparse
 from typing import Union
 
-from batchgenerators.utilities.file_and_folder_operations import join, isdir, isfile, load_json, save_json
+from batchgenerators.utilities.file_and_folder_operations import join, isdir, isfile, load_json, subfiles, save_json
 
 from nnunetv2.imageio.reader_writer_registry import determine_reader_writer_from_dataset_json
 from nnunetv2.paths import nnUNet_preprocessed, nnUNet_raw

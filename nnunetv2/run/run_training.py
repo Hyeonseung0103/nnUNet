@@ -50,12 +50,13 @@ def get_trainer_from_args(dataset_name_or_id: Union[int, str],
     if dataset_name_or_id.startswith('Dataset'):
         pass
     else:
-        try:
-            dataset_name_or_id = int(dataset_name_or_id)
-        except ValueError:
-            raise ValueError(f'dataset_name_or_id must either be an integer or a valid dataset name with the pattern '
-                             f'DatasetXXX_YYY where XXX are the three(!) task ID digits. Your '
-                             f'input: {dataset_name_or_id}')
+        if dataset_name_or_id != '':
+            try:
+                dataset_name_or_id = int(dataset_name_or_id)
+            except ValueError:
+                raise ValueError(f'dataset_name_or_id must either be an integer or a valid dataset name with the pattern '
+                                f'DatasetXXX_YYY where XXX are the three(!) task ID digits. Your '
+                                f'input: {dataset_name_or_id}')
 
     # initialize nnunet trainer
     preprocessed_dataset_folder_base = join(nnUNet_preprocessed, maybe_convert_to_dataset_name(dataset_name_or_id))
@@ -253,6 +254,7 @@ def run_training_entry():
     assert args.device in ['cpu', 'cuda', 'mps'], f'-device must be either cpu, mps or cuda. Other devices are not tested/supported. Got: {args.device}.'
     if args.device == 'cpu':
         # let's allow torch to use hella threads
+        import multiprocessing
         torch.set_num_threads(multiprocessing.cpu_count())
         device = torch.device('cpu')
     elif args.device == 'cuda':

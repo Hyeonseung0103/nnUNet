@@ -177,6 +177,7 @@ def plan_and_preprocess_entry():
 
     # fingerprint extraction
     print("Fingerprint extraction...")
+    if args.d == None : args.d = ['']
     extract_fingerprints(args.d, args.fpe, args.npfp, args.verify_dataset_integrity, args.clean, args.verbose)
 
     # experiment planning

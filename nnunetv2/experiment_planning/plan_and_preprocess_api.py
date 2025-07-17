@@ -15,7 +15,7 @@ from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
 from nnunetv2.utilities.utils import get_filenames_of_train_images_and_targets
 
 
-def extract_fingerprint_dataset(dataset_id: int,
+def extract_fingerprint_dataset(dataset_id: int | str,
                                 fingerprint_extractor_class: Type[
                                     DatasetFingerprintExtractor] = DatasetFingerprintExtractor,
                                 num_processes: int = default_num_processes, check_dataset_integrity: bool = False,
@@ -23,9 +23,6 @@ def extract_fingerprint_dataset(dataset_id: int,
     """
     Returns the fingerprint as a dictionary (additionally to saving it)
     """
-    dataset_name = convert_id_to_dataset_name(dataset_id)
-    print(dataset_name)
-
     if check_dataset_integrity:
         verify_dataset_integrity(join(nnUNet_raw, dataset_name), num_processes)
 
@@ -33,7 +30,7 @@ def extract_fingerprint_dataset(dataset_id: int,
     return fpe.run(overwrite_existing=clean)
 
 
-def extract_fingerprints(dataset_ids: List[int], fingerprint_extractor_class_name: str = 'DatasetFingerprintExtractor',
+def extract_fingerprints(dataset_ids: List[int] | List[str], fingerprint_extractor_class_name: str = 'DatasetFingerprintExtractor',
                          num_processes: int = default_num_processes, check_dataset_integrity: bool = False,
                          clean: bool = True, verbose: bool = True):
     """
@@ -47,8 +44,7 @@ def extract_fingerprints(dataset_ids: List[int], fingerprint_extractor_class_nam
         extract_fingerprint_dataset(d, fingerprint_extractor_class, num_processes, check_dataset_integrity, clean,
                                     verbose)
 
-
-def plan_experiment_dataset(dataset_id: int,
+def plan_experiment_dataset(dataset_id: int | str,
                             experiment_planner_class: Type[ExperimentPlanner] = ExperimentPlanner,
                             gpu_memory_target_in_gb: float = None, preprocess_class_name: str = 'DefaultPreprocessor',
                             overwrite_target_spacing: Optional[Tuple[float, ...]] = None,
@@ -73,7 +69,7 @@ def plan_experiment_dataset(dataset_id: int,
     return ret, planner.plans_identifier
 
 
-def plan_experiments(dataset_ids: List[int], experiment_planner_class_name: str = 'ExperimentPlanner',
+def plan_experiments(dataset_ids: List[int] | List[str], experiment_planner_class_name: str = 'ExperimentPlanner',
                      gpu_memory_target_in_gb: float = None, preprocess_class_name: str = 'DefaultPreprocessor',
                      overwrite_target_spacing: Optional[Tuple[float, ...]] = None,
                      overwrite_plans_name: Optional[str] = None):
@@ -97,7 +93,7 @@ def plan_experiments(dataset_ids: List[int], experiment_planner_class_name: str 
     return plans_identifier
 
 
-def preprocess_dataset(dataset_id: int,
+def preprocess_dataset(dataset_id: int | str,
                        plans_identifier: str = 'nnUNetPlans',
                        configurations: Union[Tuple[str], List[str]] = ('2d', '3d_fullres', '3d_lowres'),
                        num_processes: Union[int, Tuple[int, ...], List[int]] = (8, 4, 8),
@@ -141,7 +137,7 @@ def preprocess_dataset(dataset_id: int,
                   update=True)
 
 
-def preprocess(dataset_ids: List[int],
+def preprocess(dataset_ids: List[int] | List[str],
                plans_identifier: str = 'nnUNetPlans',
                configurations: Union[Tuple[str], List[str]] = ('2d', '3d_fullres', '3d_lowres'),
                num_processes: Union[int, Tuple[int, ...], List[int]] = (8, 4, 8),

@@ -39,7 +39,9 @@ def find_candidate_datasets(dataset_id: int):
     return unique_candidates
 
 
-def convert_id_to_dataset_name(dataset_id: int):
+def convert_id_to_dataset_name(dataset_id: int|str):
+    if type(dataset_id) == str:
+        return dataset_id
     unique_candidates = find_candidate_datasets(dataset_id)
     if len(unique_candidates) > 1:
         raise RuntimeError("More than one dataset name found for dataset id %d. Please correct that. (I looked in the "
@@ -63,6 +65,8 @@ def convert_dataset_name_to_id(dataset_name: str):
 
 def maybe_convert_to_dataset_name(dataset_name_or_id: Union[int, str]) -> str:
     if isinstance(dataset_name_or_id, str) and dataset_name_or_id.startswith("Dataset"):
+        return dataset_name_or_id
+    if isinstance(dataset_name_or_id, str) and dataset_name_or_id == '':
         return dataset_name_or_id
     if isinstance(dataset_name_or_id, str):
         try:

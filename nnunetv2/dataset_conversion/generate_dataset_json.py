@@ -109,3 +109,15 @@ def generate_dataset_json(output_folder: str,
     dataset_json.update(kwargs)
 
     save_json(dataset_json, join(output_folder, 'dataset.json'), sort_keys=False)
+
+generate_dataset_json(output_folder = './nnUNet/',
+                      channel_names = {
+                            "0": "CT"
+                        },
+                      labels = {
+                        "background": 0,
+                        "head-frac": 1,
+                        "skull": 2
+                      },
+                      num_training_cases = 2,
+                      file_ending = '.nrrd')

@@ -1,6 +1,7 @@
 import argparse
 import multiprocessing
 import shutil
+from multiprocessing import Pool
 from typing import Optional
 import SimpleITK as sitk
 from batchgenerators.utilities.file_and_folder_operations import *
@@ -15,7 +16,7 @@ def split_4d_nifti(filename, output_folder):
     dim = img_itk.GetDimension()
     file_base = os.path.basename(filename)
     if dim == 3:
-        shutil.copy(filename, join(output_folder, file_base[:-7] + "_0000.nii.gz"))
+        shutil.copy(filename, join(output_folder, file_base[:-7] + "_0000.nrrd"))
         return
     elif dim != 4:
         raise RuntimeError("Unexpected dimensionality: %d of file %s, cannot split" % (dim, filename))
@@ -34,7 +35,7 @@ def split_4d_nifti(filename, output_folder):
             img_itk_new.SetSpacing(spacing)
             img_itk_new.SetOrigin(origin)
             img_itk_new.SetDirection(direction)
-            sitk.WriteImage(img_itk_new, join(output_folder, file_base[:-7] + "_%04.0d.nii.gz" % i))
+            sitk.WriteImage(img_itk_new, join(output_folder, file_base[:-7] + "_%04.0d.nrrd" % i))
 
 
 def convert_msd_dataset(source_folder: str, overwrite_target_id: Optional[int] = None,
@@ -53,7 +54,8 @@ def convert_msd_dataset(source_folder: str, overwrite_target_id: Optional[int] =
 
     # infer source dataset id and name
     task, dataset_name = os.path.basename(source_folder).split('_')
-    task_id = int(task[4:])
+    # task_id = int(task[4:])
+    task_id = 999
 
     # check if target dataset id is taken
     target_id = task_id if overwrite_target_id is None else overwrite_target_id
@@ -74,7 +76,7 @@ def convert_msd_dataset(source_folder: str, overwrite_target_id: Optional[int] =
         results = []
 
         # convert 4d train images
-        source_images = [i for i in subfiles(imagesTr, suffix='.nii.gz', join=False) if
+        source_images = [i for i in subfiles(imagesTr, suffix='.nrrd', join=False) if
                          not i.startswith('.') and not i.startswith('_')]
         source_images = [join(imagesTr, i) for i in source_images]
 
@@ -85,7 +87,7 @@ def convert_msd_dataset(source_folder: str, overwrite_target_id: Optional[int] =
         )
 
         # convert 4d test images
-        source_images = [i for i in subfiles(imagesTs, suffix='.nii.gz', join=False) if
+        source_images = [i for i in subfiles(imagesTs, suffix='.nrrd', join=False) if
                          not i.startswith('.') and not i.startswith('_')]
         source_images = [join(imagesTs, i) for i in source_images]
 
@@ -96,7 +98,7 @@ def convert_msd_dataset(source_folder: str, overwrite_target_id: Optional[int] =
         )
 
         # copy segmentations
-        source_images = [i for i in subfiles(labelsTr, suffix='.nii.gz', join=False) if
+        source_images = [i for i in subfiles(labelsTr, suffix='.nrrd', join=False) if
                          not i.startswith('.') and not i.startswith('_')]
         for s in source_images:
             shutil.copy(join(labelsTr, s), join(target_labelsTr, s))
@@ -105,11 +107,11 @@ def convert_msd_dataset(source_folder: str, overwrite_target_id: Optional[int] =
 
     dataset_json = load_json(dataset_json)
     dataset_json['labels'] = {j: int(i) for i, j in dataset_json['labels'].items()}
-    dataset_json['file_ending'] = ".nii.gz"
+    dataset_json['file_ending'] = ".nrrd"
     dataset_json["channel_names"] = dataset_json["modality"]
     del dataset_json["modality"]
-    del dataset_json["training"]
-    del dataset_json["test"]
+    # del dataset_json["training"]
+    # del dataset_json["test"]
     save_json(dataset_json, join(nnUNet_raw, target_dataset_name, 'dataset.json'), sort_keys=False)
 
 

@@ -2,8 +2,8 @@ import torch
 from torch.optim import Adam, AdamW
 
 from nnunetv2.training.lr_scheduler.polylr import PolyLRScheduler
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
-
 
 class nnUNetTrainerAdam(nnUNetTrainer):
     def configure_optimizers(self):
@@ -13,7 +13,8 @@ class nnUNetTrainerAdam(nnUNetTrainer):
                           amsgrad=True)
         # optimizer = torch.optim.SGD(self.network.parameters(), self.initial_lr, weight_decay=self.weight_decay,
         #                             momentum=0.99, nesterov=True)
-        lr_scheduler = PolyLRScheduler(optimizer, self.initial_lr, self.num_epochs)
+        # lr_scheduler = PolyLRScheduler(optimizer, self.initial_lr, self.num_epochs)
+        lr_scheduler = CosineAnnealingLR(optimizer, T_max=self.num_epochs)
         return optimizer, lr_scheduler
 
 

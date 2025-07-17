@@ -122,8 +122,12 @@ class nnUNetTrainer(object):
         # inference and some of the folders may not be defined!
         self.preprocessed_dataset_folder_base = join(nnUNet_preprocessed, self.plans_manager.dataset_name) \
             if nnUNet_preprocessed is not None else None
+        
+        date = datetime.now()
         self.output_folder_base = join(nnUNet_results, self.plans_manager.dataset_name,
-                                       self.__class__.__name__ + '__' + self.plans_manager.plans_name + "__" + configuration) \
+                                       self.__class__.__name__ + '__' + self.plans_manager.plans_name + "__" + configuration + '__' + 
+                                    #    '25_6_25_9_58') \
+                                       f'{str(date.year)[2:]}_{date.month}_{date.day}_{date.hour}_{date.minute}') \
             if nnUNet_results is not None else None
         self.output_folder = join(self.output_folder_base, f'fold_{fold}')
 
@@ -148,7 +152,7 @@ class nnUNetTrainer(object):
         self.probabilistic_oversampling = False
         self.num_iterations_per_epoch = 250
         self.num_val_iterations_per_epoch = 50
-        self.num_epochs = 1000
+        self.num_epochs = 200
         self.current_epoch = 0
         self.enable_deep_supervision = True
 
@@ -178,13 +182,15 @@ class nnUNetTrainer(object):
 
         ### initializing stuff for remembering things and such
         self._best_ema = None
+        self.best_epoch = 0
 
         ### inference things
         self.inference_allowed_mirroring_axes = None  # this variable is set in
         # self.configure_rotation_dummyDA_mirroring_and_inital_patch_size and will be saved in checkpoints
 
         ### checkpoint saving stuff
-        self.save_every = 50
+        # self.save_every = 50
+        self.save_every = 10
         self.disable_checkpointing = False
 
         self.was_initialized = False
@@ -1120,7 +1126,7 @@ class nnUNetTrainer(object):
     def on_epoch_start(self):
         self.logger.log('epoch_start_timestamps', time(), self.current_epoch)
 
-    def on_epoch_end(self):
+    def on_epoch_end(self, early_stopping_cnt = 0):
         self.logger.log('epoch_end_timestamps', time(), self.current_epoch)
 
         self.print_to_log_file('train_loss', np.round(self.logger.my_fantastic_logging['train_losses'][-1], decimals=4))
@@ -1129,22 +1135,33 @@ class nnUNetTrainer(object):
                                                self.logger.my_fantastic_logging['dice_per_class_or_region'][-1]])
         self.print_to_log_file(
             f"Epoch time: {np.round(self.logger.my_fantastic_logging['epoch_end_timestamps'][-1] - self.logger.my_fantastic_logging['epoch_start_timestamps'][-1], decimals=2)} s")
-
+        self.print_to_log_file(f'Current best dice at {self.best_epoch}', self._best_ema)
         # handling periodic checkpointing
         current_epoch = self.current_epoch
         if (current_epoch + 1) % self.save_every == 0 and current_epoch != (self.num_epochs - 1):
             self.save_checkpoint(join(self.output_folder, 'checkpoint_latest.pth'))
 
         # handle 'best' checkpointing. ema_fg_dice is computed by the logger and can be accessed like this
-        if self._best_ema is None or self.logger.my_fantastic_logging['ema_fg_dice'][-1] > self._best_ema:
+        if (self._best_ema is None or self.logger.my_fantastic_logging['ema_fg_dice'][-1] > self._best_ema): 
+        # and \
+        #     (all(not np.isnan(value) for value in self.logger.my_fantastic_logging['dice_per_class_or_region'][-1])): # nan 이 없을 때만 평균이 의미가 있음
+        #                                                                                                               # nan 이 있으면 예측을 아예 못한 것이니까 평균이 높아도 의미X
+            self.best_epoch = current_epoch
             self._best_ema = self.logger.my_fantastic_logging['ema_fg_dice'][-1]
             self.print_to_log_file(f"Yayy! New best EMA pseudo Dice: {np.round(self._best_ema, decimals=4)}")
             self.save_checkpoint(join(self.output_folder, 'checkpoint_best.pth'))
+            early_stopping_cnt = 0
 
+        else:
+            early_stopping_cnt += 1
+            self.print_to_log_file(f'Current early_stopping_cnt: {early_stopping_cnt}')
+
+        self.print_to_log_file(f'Output folder: {self.output_folder_base}')
         if self.local_rank == 0:
             self.logger.plot_progress_png(self.output_folder)
 
         self.current_epoch += 1
+        return early_stopping_cnt
 
     def save_checkpoint(self, filename: str) -> None:
         if self.local_rank == 0:
@@ -1361,7 +1378,8 @@ class nnUNetTrainer(object):
 
     def run_training(self):
         self.on_train_start()
-
+        early_stopping = 200
+        early_stopping_cnt = 0
         for epoch in range(self.current_epoch, self.num_epochs):
             self.on_epoch_start()
 
@@ -1378,6 +1396,9 @@ class nnUNetTrainer(object):
                     val_outputs.append(self.validation_step(next(self.dataloader_val)))
                 self.on_validation_epoch_end(val_outputs)
 
-            self.on_epoch_end()
+            early_stopping_cnt = self.on_epoch_end(early_stopping_cnt)
+            if early_stopping_cnt >= early_stopping:
+                self.print_to_log_file('No validation score increased within 200 epochs. Early Stopping!')
+                break
 
         self.on_train_end()

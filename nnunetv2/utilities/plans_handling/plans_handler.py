@@ -44,9 +44,13 @@ class ConfigurationManager(object):
                 network_class_name = "dynamic_network_architectures.architectures.unet.PlainConvUNet"
             elif unet_class_name == 'ResidualEncoderUNet':
                 network_class_name = "dynamic_network_architectures.architectures.residual_unet.ResidualEncoderUNet"
+            elif unet_class_name == 'ResidualUNet':
+                network_class_name = "dynamic_network_architectures.architectures.residual_unet.ResidualUNet"
+            elif unet_class_name == 'ResidualAttentionUNet':
+                network_class_name = "nnunetv2.hs_custom.residual_attention_unet.ResidualAttentionUNet"
             else:
                 raise RuntimeError(f'Unknown architecture {unet_class_name}. This conversion only supports '
-                                   f'PlainConvUNet and ResidualEncoderUNet')
+                                   f'PlainConvUNet and ResidualEncoderUNet and ResidualUNet')
 
             n_stages = len(self.configuration["n_conv_per_stage_encoder"])
 

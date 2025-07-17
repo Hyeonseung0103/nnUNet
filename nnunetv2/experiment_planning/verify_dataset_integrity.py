@@ -13,6 +13,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import multiprocessing
+import re
+from multiprocessing import Pool
 from typing import Type
 
 import numpy as np
@@ -23,7 +25,8 @@ from nnunetv2.imageio.base_reader_writer import BaseReaderWriter
 from nnunetv2.imageio.reader_writer_registry import determine_reader_writer_from_dataset_json
 from nnunetv2.paths import nnUNet_raw
 from nnunetv2.utilities.label_handling.label_handling import LabelManager
-from nnunetv2.utilities.utils import get_filenames_of_train_images_and_targets
+from nnunetv2.utilities.utils import get_identifiers_from_splitted_dataset_folder, \
+    get_filenames_of_train_images_and_targets
 
 
 def verify_labels(label_file: str, readerclass: Type[BaseReaderWriter], expected_labels: List[int]) -> bool:
@@ -174,7 +177,7 @@ def verify_dataset_integrity(folder: str, num_processes: int = 8) -> None:
                                     f"\n{missing_images}\n\nMissing labels:\n{missing_labels}")
     else:
         # old code that uses imagestr and labelstr folders
-        labelfiles = subfiles(join(folder, 'labelsTr'), suffix=file_ending, join=False)
+        # labelfiles = subfiles(join(folder, 'labelsTr'), suffix=file_ending, join=False)
         label_identifiers = [i[:-len(file_ending)] for i in labelfiles]
         labels_present = [i in label_identifiers for i in dataset.keys()]
         missing = [i for j, i in enumerate(dataset.keys()) if not labels_present[j]]
