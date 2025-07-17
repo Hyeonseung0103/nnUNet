@@ -139,7 +139,7 @@ def compute_metrics_on_folder(folder_ref: str, folder_pred: str, output_file: st
     if not chill:
         present = [isfile(join(folder_pred, i.split('.')[0] + '-pred.seg.nrrd')) for i in files_ref] if inference else [isfile(join(folder_pred, i)) for i in files_ref]
         assert all(present), "Not all files in folder_ref exist in folder_pred"
-    files_ref = [join(folder_ref, i.split('.')[0] + '.nrrd') for i in files_pred] if inference else [join(folder_ref, i) for i in files_pred] # pred 에 있는 파일만 ref 에 넣어야함
+    files_ref = [join(folder_ref, i.split('-pred.seg')[0] + '.nrrd') for i in files_pred] if inference else [join(folder_ref, i) for i in files_pred] # pred 에 있는 파일만 ref 에 넣어야함
     files_pred = [join(folder_pred, i) for i in files_pred]
     with multiprocessing.get_context("spawn").Pool(num_processes) as pool:
         # for i in list(zip(files_ref, files_pred, [image_reader_writer] * len(files_pred), [regions_or_labels] * len(files_pred), [ignore_label] * len(files_pred))):
