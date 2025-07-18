@@ -572,7 +572,10 @@ class nnUNetTrainer(object):
             # if fold==all then we use all images for training and validation
             case_identifiers = self.dataset_class.get_identifiers(self.preprocessed_dataset_folder)
             tr_keys = case_identifiers
-            val_keys = tr_keys
+            
+            # all 이면 validation dataset 은 train 이 아니라 validation dataset 을 따로 쓰도록
+            val_path = os.path.join(os.environ.get('nnUNet_raw').replace('/train', '/val'), 'image')
+            val_keys = [x.split('.nrrd')[0] for x in sorted(os.listdir(val_path))]
         else:
             splits_file = join(self.preprocessed_dataset_folder_base, "splits_final.json")
             dataset = self.dataset_class(self.preprocessed_dataset_folder,

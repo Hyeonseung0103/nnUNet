@@ -129,10 +129,17 @@ def preprocess_dataset(dataset_id: int | str,
     from distutils.file_util import copy_file
     maybe_mkdir_p(join(nnUNet_preprocessed, dataset_name, 'gt_segmentations'))
     dataset_json = load_json(join(nnUNet_raw, dataset_name, 'dataset.json'))
-    dataset = get_filenames_of_train_images_and_targets(join(nnUNet_raw, dataset_name), dataset_json)
+    train_dataset = get_filenames_of_train_images_and_targets(join(nnUNet_raw, dataset_name), dataset_json)
+    val_dataset = get_filenames_of_train_images_and_targets(join(nnUNet_raw.replace('/train', '/val'), dataset_name), dataset_json)
+
     # only copy files that are newer than the ones already present
-    for k in dataset:
-        copy_file(dataset[k]['label'],
+    for k in train_dataset:
+        copy_file(train_dataset[k]['label'],
+                  join(nnUNet_preprocessed, dataset_name, 'gt_segmentations', k + dataset_json['file_ending']),
+                  update=True)
+
+    for k in val_dataset:
+        copy_file(val_dataset[k]['label'],
                   join(nnUNet_preprocessed, dataset_name, 'gt_segmentations', k + dataset_json['file_ending']),
                   update=True)
 

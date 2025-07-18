@@ -4,7 +4,7 @@ from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
 from nnunetv2.training.nnUNetTrainer.variants.optimizer.nnUNetTrainerAdam import nnUNetTrainerAdam
 from nnunetv2.training.nnUNetTrainer.variants.optimizer.nnUNetTrainerNAdam import nnUNetTrainerNAdam
 from nnunetv2.training.nnUNetTrainer.variants.optimizer.nnUNetTrainerRAdam import nnUNetTrainerRAdam
-from torch.optim.lr_scheduler import CosineAnnealingWarmUpRestarts
+from nnunetv2.hs_custom.lr_scheduler import CosineAnnealingWarmUpRestarts
 from torch.optim import Adam, AdamW
 
 class nnUNetTrainer_5epochs(nnUNetTrainer):

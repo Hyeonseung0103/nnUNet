@@ -270,11 +270,23 @@ class DefaultPreprocessor(object):
         maybe_mkdir_p(output_directory)
 
         dataset = get_filenames_of_train_images_and_targets(join(nnUNet_raw, dataset_name), dataset_json)
+        val_dataset = get_filenames_of_train_images_and_targets(join(nnUNet_raw.replace('/train', '/val'), dataset_name), dataset_json)
 
         # identifiers = [os.path.basename(i[:-len(dataset_json['file_ending'])]) for i in seg_fnames]
         # output_filenames_truncated = [join(output_directory, i) for i in identifiers]
 
         # multiprocessing magic.
+        self.process(dataset, output_directory, plans_manager, configuration_manager, dataset_json, num_processes)
+        self.process(val_dataset, output_directory, plans_manager, configuration_manager, dataset_json, num_processes)
+
+    def modify_seg_fn(self, seg: np.ndarray, plans_manager: PlansManager, dataset_json: dict,
+                      configuration_manager: ConfigurationManager) -> np.ndarray:
+        # this function will be called at the end of self.run_case. Can be used to change the segmentation
+        # after resampling. Useful for experimenting with sparse annotations: I can introduce sparsity after resampling
+        # and don't have to create a new dataset each time I modify my experiments
+        return seg
+    
+    def process(self, dataset, output_directory, plans_manager, configuration_manager, dataset_json, num_processes):
         r = []
         with multiprocessing.get_context("spawn").Pool(num_processes) as p:
             remaining = list(range(len(dataset)))
@@ -306,13 +318,6 @@ class DefaultPreprocessor(object):
                         pbar.update()
                     remaining = [i for i in remaining if i not in done]
                     sleep(0.1)
-
-    def modify_seg_fn(self, seg: np.ndarray, plans_manager: PlansManager, dataset_json: dict,
-                      configuration_manager: ConfigurationManager) -> np.ndarray:
-        # this function will be called at the end of self.run_case. Can be used to change the segmentation
-        # after resampling. Useful for experimenting with sparse annotations: I can introduce sparsity after resampling
-        # and don't have to create a new dataset each time I modify my experiments
-        return seg
 
 
 def example_test_case_preprocessing():

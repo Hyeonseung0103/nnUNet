@@ -3,7 +3,7 @@ from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
 from nnunetv2.training.nnUNetTrainer.variants.training_length.nnUNetTrainer_Xepochs import nnUNetTrainer_500epochs, nnUNetTrainer_2000epochs, nnUNetTrainerAdamCosine_2000epochs, nnUNetTrainerNAdam_2000epochs, nnUNetTrainerRAdam_2000epochs
 from nnunetv2.training.loss.compound_cbdice_loss import DC_and_CE_and_CBDC_loss
 from nnunetv2.training.loss.focal import FocalLoss
-from torch.optim.lr_scheduler import CosineAnnealingWarmUpRestarts
+from nnunetv2.hs_custom.lr_scheduler import CosineAnnealingWarmUpRestarts
 import numpy as np
 
 class nnUNetTrainerCBDCDiceAndCELoss(nnUNetTrainer_2000epochs):
